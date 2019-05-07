@@ -97,6 +97,8 @@ class _LoginState extends State<LoginScreen> {
                 _navigateToNext(context);
               },
             ),
+
+
             ButtonBar(
               children: <Widget>[
                 RaisedButton(
