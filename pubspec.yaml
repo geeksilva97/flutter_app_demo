@@ -30,6 +30,11 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: ^0.7.0
+
+flutter_icons:
+  android: "ic_launcher"
+  image_path: "images/logo.png"
 
 
 # For information on the generic Dart part of this file, see the
