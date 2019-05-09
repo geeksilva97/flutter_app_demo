@@ -13,6 +13,13 @@ class _EstoqueState extends State<EstoqueScreen> {
   String dropdownValue;
   String codPro;
 
+
+  // model for form
+  ItemRota rota = ItemRota();
+
+  // model
+  Produto produto = Produto();
+
   List<ItemRota> itemRotas = [
     ItemRota(rota: '01', produtos: <Produto>[
       Produto(codPro: '010.01', qtd: 10, codTns: '1234ABC'),
@@ -22,24 +29,29 @@ class _EstoqueState extends State<EstoqueScreen> {
     ].toList())
   ];
 
+  List<DropdownMenuItem<String>> menuProdutos = <String>[
+    '010.01',
+    '015.01',
+    '015.02',
+    '020.01',
+    '020.02'
+  ]
+          .map<DropdownMenuItem<String>>((String value) {
+            return DropdownMenuItem<String>(
+              value: value,
+              child: Text(value),
+            );
+          })
+          .toList();
+
+
   List<DropdownMenuItem<String>> menuRotas = [
     DropdownMenuItem<String>(
       value: '01',
-      child: Padding(child: Text('ROTA 01'), padding: EdgeInsets.symmetric(vertical: 18.0),)
-    ),
-
-    DropdownMenuItem<String>(
-      value: '02',
-      child: Padding(child: Text('ROTA 02'), padding: EdgeInsets.symmetric(vertical: 18.0),)
+      child: Text('ROTA 01')
     )
   ];
- 
 
-
-
-
-  List<String> rotas = ['01', '02', '03'];
-  var service = EstoqueService();
 
 
   List<DropdownMenuItem<String>> menuItems = [
@@ -55,16 +67,6 @@ class _EstoqueState extends State<EstoqueScreen> {
       child: Padding(child: Text('item 01'), padding: EdgeInsets.symmetric(vertical: 18.0),)
     )
   ];
-
-  var _produtos = <String>['010.01', '015.01', '015.02'].map<DropdownMenuItem<String>>((String value) {
-      var dropdownMenuItem = DropdownMenuItem<String>(
-        value: value,
-        child: Text(value)
-      );
-      return dropdownMenuItem;
-    },
-  ).toList();
-
 
   Widget _buildDrawer(BuildContext context) {
     return Drawer(
@@ -118,34 +120,12 @@ class _EstoqueState extends State<EstoqueScreen> {
 
 
 
-  Widget _buildCard(ItemRota itemRota) {
-    return Card(
-      elevation: 5.0,
-      child: Padding(
-        padding: EdgeInsets.only(bottom: 10.0),
-              child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            ListTile(
-              title: Text('Rota ${itemRota.rota}', style: TextStyle(
-              fontSize: 20.0,
-              fontWeight: FontWeight.bold
-              ),),
-            ),
-            SizedBox(height: 6.0,)
-
-          ],
-        ),
-      ),
-    );
-  }
-
-
+ 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Estoque'),
+        title: Text('Estoque', style: TextStyle(color: Colors.white),),
         leading: null,
         actions: <Widget>[
          IconButton(
@@ -155,8 +135,6 @@ class _EstoqueState extends State<EstoqueScreen> {
          )
         ],
       ),
-
-      // drawer: _buildDrawer(context),
 
      
      body: SafeArea(
@@ -180,9 +158,9 @@ class _EstoqueState extends State<EstoqueScreen> {
           child: Column(
             children: <Widget>[
               Container(
-                padding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
+                padding: EdgeInsets.only(top: 8.0, bottom: 20.0, left: 12.0, right: 12.0),//EdgeInsets.symmetric(vertical: 20.0, horizontal: 12.0),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFC4D0FF),
+                  color: const Color(0xDDFFE0CC),
                   borderRadius: BorderRadius.only(topLeft: Radius.circular(5.0), topRight: Radius.circular(5.0))
                 ),
 
@@ -191,11 +169,13 @@ class _EstoqueState extends State<EstoqueScreen> {
                   children: <Widget>[
                     DropdownButtonFormField<String>(
                       items: menuRotas,
-                      onChanged: (String newValue){},
+                      value: rota.rota,
+                      onChanged: (String newValue){
+                        setState(() {
+                          rota.rota = newValue; 
+                        });
+                      },
                       hint: Text('SELECIONE A ROTA', style: TextStyle(fontWeight: FontWeight.bold),),
-                      decoration: InputDecoration( 
-                       
-                      ),
                     ),
 
                     Row(
@@ -204,6 +184,8 @@ class _EstoqueState extends State<EstoqueScreen> {
                         Expanded(
                             flex: 1,
                             child: TextFormField(
+                            initialValue: rota.qtdLeiteC != null ? rota.qtdLeiteC.toString() : '',
+                            keyboardType: TextInputType.number,
                             decoration: InputDecoration(
                               labelText: 'QTD. LEITE C',  
                             ),
@@ -215,6 +197,7 @@ class _EstoqueState extends State<EstoqueScreen> {
                         Expanded(
                           flex: 2,
                           child: TextFormField(
+                            keyboardType: TextInputType.number,
                             decoration: InputDecoration(
                               labelText: 'QTD. CAIXAS LEVADAS'
                             ),
@@ -226,6 +209,8 @@ class _EstoqueState extends State<EstoqueScreen> {
                         Expanded(
                           flex: 2,
                           child: TextFormField(
+                            initialValue: '',
+                            keyboardType: TextInputType.number,
                             decoration: InputDecoration(
                               labelText: 'QTD. CAIXAS RETORNADAS'
                             ),
@@ -251,10 +236,10 @@ class _EstoqueState extends State<EstoqueScreen> {
                               decoration: InputDecoration(
                                 contentPadding: EdgeInsets.symmetric(vertical: 17.9, horizontal: 8.0),
                               ),
-                              items: menuItems,
+                              items: menuProdutos,
                               hint: Text('PRODUTO'),
                               onChanged: (String value) {
-                                print(value);
+                                print('PRODUTO $value');
                               },
                             ),
                           ),
@@ -264,9 +249,14 @@ class _EstoqueState extends State<EstoqueScreen> {
 
                           Expanded(
                             flex: 2,
-                            child: TextFormField(decoration: InputDecoration(
-                              labelText: "QUANTIDADE",
-                            ),),
+                            child: TextFormField(
+                              onFieldSubmitted: (String value) {
+                                produto.qtd = value as int;
+                              },
+                              decoration: InputDecoration(
+                                labelText: "QUANTIDADE",
+                              ),
+                            ),
                           ),
 
 
@@ -279,9 +269,10 @@ class _EstoqueState extends State<EstoqueScreen> {
                                 contentPadding: EdgeInsets.symmetric(vertical: 18.0, horizontal: 8.0),
                               ),
                               items: menuItems,
+                              value: produto.codTns,
                               hint: Text('TRANSAÇÃO'),
                               onChanged: (String value) {
-                                print(value);
+                                produto.codTns = value;
                               },
                             ),
                           )
@@ -295,12 +286,52 @@ class _EstoqueState extends State<EstoqueScreen> {
                             splashColor: Theme.of(context).splashColor,
                             icon: Icon(Icons.add, color: Colors.white,),
                             label:  Text('Adicionar produto', style: TextStyle(color: Colors.white),),
-                            onPressed: (){},
+                            onPressed: (){
+                              rota.produtos.add(produto);
+                              produto = Produto();
+                            },
                           )
                         ],
                       ),
                     ),
 
+
+                    SizedBox(height: 12,),
+
+                    Table(
+                      border: TableBorder(
+                        bottom: BorderSide(
+                          width: 1.0,
+                          color: Colors.deepOrangeAccent
+                        )
+                      ),
+                      children: [
+                        TableRow(  
+                          children: [
+                            TableCell(child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Text('PRODUTO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16.0),),
+                            ), verticalAlignment: TableCellVerticalAlignment.middle,),
+
+                             TableCell(child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Text('QUANTIDADE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16.0),),
+                            ), verticalAlignment: TableCellVerticalAlignment.middle,),
+
+                             TableCell(child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Text('TRANSAÇÃO', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16.0),),
+                            ), verticalAlignment: TableCellVerticalAlignment.middle,)
+                          ]
+                        ),
+
+
+
+                        
+                      ],
+                    ),
+
+                    SizedBox(height: 12,),
 
 
                     Row(
