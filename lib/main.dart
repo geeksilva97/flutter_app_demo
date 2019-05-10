@@ -1,3 +1,4 @@
+import 'package:estoque_app/wigets/home/home.dart';
 import 'package:flutter/material.dart';
 import 'screens/login.dart';
 import 'screens/estoque_screen.dart';
@@ -16,8 +17,8 @@ class MyApp extends StatelessWidget {
       title: 'Leite Maranguape',
       initialRoute: '/',
       routes: {
-        '/': (context) => LoginScreen(),
-        '/main': (context) => EstoqueScreen()
+        '/': (context) => Home(),
+        '/main': (context) => Home()
       },
       theme: ThemeData(
         // This is the theme of your application.
@@ -29,7 +30,7 @@ class MyApp extends StatelessWidget {
         // or simply save your changes to "hot reload" in a Flutter IDE).
         // Notice that the counter didn't reset back to zero; the application
         // is not restarted.
-        primarySwatch: Colors.orange,
+        primarySwatch: Colors.deepOrange,
       ),
     );
   }
