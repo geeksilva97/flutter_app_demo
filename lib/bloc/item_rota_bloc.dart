@@ -20,6 +20,11 @@ class ItemRotaBloc {
     }
   }
 
+  void removeProduto(int index) {
+    _itemRota.produtos.removeAt(index);
+    _controller.sink.add(_itemRota) ;
+  }
+
   List<Produto> getProdutos() => _itemRota.produtos;
 
   void dispose() {

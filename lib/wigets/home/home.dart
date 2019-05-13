@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:estoque_app/models/produto.dart';
 import 'package:estoque_app/models/item_rota.dart';
-
+import 'package:intl/intl.dart';
 import 'package:estoque_app/bloc/item_rota_bloc.dart';
 
 class Home extends StatelessWidget {
@@ -36,7 +36,6 @@ class FormEstoque extends StatefulWidget {
 
 class _FormEstoqueState extends State<FormEstoque> {
 
-  String _rotaSelecionada = '01';
   ItemRota _modelItemRota = ItemRota(produtos: <Produto>[].toList());
   Produto _modelProduto = Produto();
 
@@ -76,12 +75,58 @@ class _FormEstoqueState extends State<FormEstoque> {
 
 
   TextEditingController myController;
+  TextEditingController _dateFieldController = TextEditingController();
+  TextEditingController _textEditingControllerDtEntrega = TextEditingController();
+  DateTime initialDate = DateTime.now();
 
+
+  FocusNode _dateFieldFocusNode = FocusNode();
+  FocusNode _focusNodeDateFieldDtEntrega = FocusNode();
+
+
+  Future<Null> _selectingDate(BuildContext context, DateTime initialDate, TextEditingController controller, FocusNode focusNode) async {
+    final DateTime picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(2000, 1),
+      lastDate: DateTime(2100,12),
+      locale: Locale('pt')
+    );
+
+    focusNode.unfocus();
+    if(picked == null) return;
+
+    String day = (picked.day < 10) ? '0${picked.day}' : picked.day.toString();
+    String month = (picked.month < 10) ? '0${picked.month}' : picked.month.toString();
+    String year = (picked.year < 10) ? '0${picked.year}' : picked.year.toString();
+
+    controller.text = '$day/$month/$year'; 
+  }
+
+
+  Future<Null> _selectDate(BuildContext context) async {
+    final DateTime picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(2000  ,8),
+      lastDate: DateTime(2101),
+      locale: Locale('pt')
+    );
+
+    _dateFieldFocusNode.unfocus();
+
+    String day = (picked.day < 10) ? '0${picked.day}' : picked.day.toString();
+    String month = (picked.month < 10) ? '0${picked.month}' : picked.month.toString();
+    String year = (picked.year < 10) ? '0${picked.year}' : picked.year.toString();
+
+    _dateFieldController.text = '$day/$month/$year'; 
+  }
 
   @override
   void initState() {
     super.initState();
     myController  = TextEditingController(text: (_modelProduto.qtd != null) ? _modelProduto.toString() : '');
+
     myController.addListener(() {
       print('Editando texto \'${myController.text}\'');
       setState(() {
@@ -90,14 +135,45 @@ class _FormEstoqueState extends State<FormEstoque> {
         }
       });
     });
+
+
+    _dateFieldFocusNode.addListener(() {
+      if(_dateFieldFocusNode.hasFocus) {
+        var content = _dateFieldController.text;
+        DateTime _initialDate;
+        if(content.isNotEmpty) {
+          var dt = content.split('/');
+          _initialDate = DateTime(int.parse(dt[2]), int.parse(dt[1]), int.parse(dt[0]));
+        }else {
+          _initialDate = DateTime.now();
+        }
+
+        _selectingDate(context, _initialDate, _dateFieldController, _dateFieldFocusNode);
+      }
+    });
+
+    _focusNodeDateFieldDtEntrega.addListener((){
+      if(_focusNodeDateFieldDtEntrega.hasFocus) {
+        var content = _textEditingControllerDtEntrega.text;
+        DateTime _initialDate;
+        if(content.isNotEmpty) {
+          var dt = content.split('/');
+          _initialDate = DateTime(int.parse(dt[2]), int.parse(dt[1]), int.parse(dt[0]));
+        }else {
+          _initialDate = DateTime.now();
+        }
+
+        _selectingDate(context, _initialDate, _textEditingControllerDtEntrega, _focusNodeDateFieldDtEntrega);
+      }
+    });
   }
-
-
-  
 
 
   @override
   Widget build(BuildContext context) {
+
+    _dateFieldFocusNode.unfocus();
+
     return Card(
       elevation: 15.0,
       child: Column(
@@ -130,11 +206,50 @@ class _FormEstoqueState extends State<FormEstoque> {
                   mainAxisSize: MainAxisSize.max,
                       children: <Widget>[
                         Expanded(
-                            flex: 1,
+                            flex: 2,
                             child: TextFormField(
+                            focusNode: _dateFieldFocusNode,
+                            controller: _dateFieldController,
+                            keyboardType: TextInputType.datetime,
+                            decoration: InputDecoration(
+                              labelText: 'DATA DE EMISSÃO',  
+                            ),
+                          ),
+                        ),
+
+                        SizedBox(width: 5.0,),
+
+                         Expanded(
+                            flex: 2,
+                            child: TextFormField(
+                            focusNode: _focusNodeDateFieldDtEntrega,
+                            controller: _textEditingControllerDtEntrega,
+                            keyboardType: TextInputType.datetime,
+                            decoration: InputDecoration(
+                              labelText: 'DATA DE ENTREGA',  
+                            ),
+                          ),
+                        ),
+
+                        
+
+                      ],
+                    ),
+
+
+
+
+
+                    Row(
+                      children: <Widget>[
+                        Expanded(
+                          flex: 1,
+                          child: TextFormField(
+                            initialValue: '9',
+                            enabled: false,
                             keyboardType: TextInputType.number,
                             decoration: InputDecoration(
-                              labelText: 'QTD. LEITE C',  
+                              labelText: 'COMISSÃO'
                             ),
                           ),
                         ),
@@ -146,7 +261,7 @@ class _FormEstoqueState extends State<FormEstoque> {
                           child: TextFormField(
                             keyboardType: TextInputType.number,
                             decoration: InputDecoration(
-                              labelText: 'QTD. CAIXAS LEVADAS'
+                              labelText: 'CXS. RETORNADAS'
                             ),
                           ),
                         ),
@@ -156,13 +271,12 @@ class _FormEstoqueState extends State<FormEstoque> {
                         Expanded(
                           flex: 2,
                           child: TextFormField(
-                            initialValue: '',
                             keyboardType: TextInputType.number,
                             decoration: InputDecoration(
-                              labelText: 'QTD. CAIXAS RETORNADAS'
+                              labelText: 'SALDO DE CAIXAS'
                             ),
                           ),
-                        )
+                        ),
                       ],
                     )
 
@@ -263,17 +377,31 @@ class _FormEstoqueState extends State<FormEstoque> {
                       builder: (context, snapshot) {
                         if(snapshot.hasData) {
                           var produtos = snapshot.data.produtos as List<Produto>;
-                          var children = produtos.map((Produto produto) {
-                              return Column(
+                          
+
+                          if(produtos.length == 0) {
+                            return Text('NENUM PRODUTO ADICIONADO');
+                          }
+
+                          List<Column> _children = [];
+
+                          produtos.asMap().forEach((int index, Produto produto) => {
+                            _children.add(
+                              Column(
                                 children: <Widget>[
                                   Container(
-                                    color: Colors.grey[200],
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.all(Radius.circular(5)),
+                                      color: Colors.grey[200],
+                                    ),
                                     child: Dismissible(
+                                      direction: DismissDirection.endToStart,
                                       onDismissed: (DismissDirection direction) {
                                         print('Item removido');
-                                        print(direction.index);
+                                        print(index);
+                                        itemRotaBloc.removeProduto(index);
                                       },
-                                      background: Container(color: Colors.red),
+                                      background: Container(color: Colors.red, child: Row(mainAxisAlignment: MainAxisAlignment.end, children: <Widget>[Icon(Icons.remove_circle, color: Colors.white,), SizedBox(width: 20,)],)),
                                       key: ValueKey('${produto.codPro}${produto.qtd}${produto.codTns}'),
                                       child: ListTile(
                                         title: Text(produto.codPro),
@@ -282,14 +410,12 @@ class _FormEstoqueState extends State<FormEstoque> {
                                     ),
                                   )
                                 ],
-                              );
-                          }).toList();
-
-
-                     
+                              )
+                            )
+                          });
 
                           return Column(
-                            children: children,
+                            children: _children,
                           );
 
                           // return Row(children: children, mainAxisAlignment: MainAxisAlignment.spaceBetween,);

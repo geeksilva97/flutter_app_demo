@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'screens/login.dart';
 import 'screens/estoque_screen.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 void main() async {
   await SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
@@ -20,6 +21,13 @@ class MyApp extends StatelessWidget {
         '/': (context) => Home(),
         '/main': (context) => Home()
       },
+      localizationsDelegates: [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+      ],
+      supportedLocales: [
+        Locale('pt')
+      ],
       theme: ThemeData(
         // This is the theme of your application.
         //
