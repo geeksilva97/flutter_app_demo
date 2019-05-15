@@ -1,7 +1,10 @@
+import 'dart:convert';
+
+import 'package:estoque_app/models/rota.dart';
 import 'package:flutter/material.dart';
 import 'package:estoque_app/models/produto.dart';
 import 'package:estoque_app/models/item_rota.dart';
-import 'package:intl/intl.dart';
+import 'package:dio/dio.dart';
 import 'package:estoque_app/bloc/item_rota_bloc.dart';
 
 class Home extends StatelessWidget {
@@ -103,28 +106,23 @@ class _FormEstoqueState extends State<FormEstoque> {
     controller.text = '$day/$month/$year'; 
   }
 
-
-  Future<Null> _selectDate(BuildContext context) async {
-    final DateTime picked = await showDatePicker(
-      context: context,
-      initialDate: initialDate,
-      firstDate: DateTime(2000  ,8),
-      lastDate: DateTime(2101),
-      locale: Locale('pt')
-    );
-
-    _dateFieldFocusNode.unfocus();
-
-    String day = (picked.day < 10) ? '0${picked.day}' : picked.day.toString();
-    String month = (picked.month < 10) ? '0${picked.month}' : picked.month.toString();
-    String year = (picked.year < 10) ? '0${picked.year}' : picked.year.toString();
-
-    _dateFieldController.text = '$day/$month/$year'; 
+  Future<Null> _getRotas() async {
+     // Recuperando rotas com DIO
+    print('RECUPERANDO ROTAS com dio');
+    Response response;
+    var dio = Dio();
+    dio.options.baseUrl = 'http://192.168.0.4:5200/api';
+    response = await dio.get('/general/rotas');
+   
+    var myThing = (jsonDecode(response.data) as List).map((e) => Rota.fromJson(e)).toList();
+    
+    
   }
 
   @override
   void initState() {
-    super.initState();
+    super.initState();   
+
     myController  = TextEditingController(text: (_modelProduto.qtd != null) ? _modelProduto.toString() : '');
 
     myController.addListener(() {
@@ -173,6 +171,7 @@ class _FormEstoqueState extends State<FormEstoque> {
   Widget build(BuildContext context) {
 
     _dateFieldFocusNode.unfocus();
+    _getRotas();
 
     return Card(
       elevation: 15.0,

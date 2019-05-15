@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:estoque_app/services/estoque_service.dart';
-import 'package:badges/badges.dart';
 
 
 class EstoqueScreen extends StatefulWidget {
