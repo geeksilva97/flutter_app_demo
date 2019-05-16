@@ -1,11 +1,14 @@
 import 'dart:convert';
 
+import 'package:estoque_app/bloc/rota_bloc.dart';
 import 'package:estoque_app/models/rota.dart';
+import 'package:estoque_app/models/transacao.dart';
 import 'package:flutter/material.dart';
 import 'package:estoque_app/models/produto.dart';
 import 'package:estoque_app/models/item_rota.dart';
 import 'package:dio/dio.dart';
 import 'package:estoque_app/bloc/item_rota_bloc.dart';
+import 'package:estoque_app/bloc/transacao_bloc.dart';
 
 class Home extends StatelessWidget {
 
@@ -17,6 +20,28 @@ class Home extends StatelessWidget {
       appBar: AppBar(
         title: Text('Estoque', style: TextStyle(color: Colors.white)),
         leading: null,
+      ),
+
+      drawer: Drawer(
+        child: ListView(
+          children: <Widget>[
+            ListTile(
+              title: Text('Adicionar Rota'),
+              leading: Icon(Icons.add),
+              onTap: () {
+
+              },
+            ),
+
+            ListTile(
+              title: Text('Consultar rotas'),
+              leading: Icon(Icons.remove_red_eye),
+              onTap: () {
+                
+              },
+            )
+          ],
+        ),
       ),
 
       body: SafeArea(
@@ -39,17 +64,7 @@ class FormEstoque extends StatefulWidget {
 
 class _FormEstoqueState extends State<FormEstoque> {
 
-  ItemRota _modelItemRota = ItemRota(produtos: <Produto>[].toList());
   Produto _modelProduto = Produto();
-
-  // definindo lista de rotas
-  List<DropdownMenuItem<String>> _menuRotas = <String>['01','02','03','04','05','06',]
-    .map<DropdownMenuItem<String>>((String value) {
-      return DropdownMenuItem<String>(
-        value: value,
-        child: Text(value),
-      );
-    }).toList();
 
  // definindo lista de rotas
   List<DropdownMenuItem<String>> _menuTns = <String>['901235', '90879']
@@ -80,6 +95,9 @@ class _FormEstoqueState extends State<FormEstoque> {
   TextEditingController myController;
   TextEditingController _dateFieldController = TextEditingController();
   TextEditingController _textEditingControllerDtEntrega = TextEditingController();
+  TextEditingController _textEditingControllerTotal = TextEditingController();
+  TextEditingController _textEditingControllerComissao = TextEditingController();
+
   DateTime initialDate = DateTime.now();
 
 
@@ -104,19 +122,6 @@ class _FormEstoqueState extends State<FormEstoque> {
     String year = (picked.year < 10) ? '0${picked.year}' : picked.year.toString();
 
     controller.text = '$day/$month/$year'; 
-  }
-
-  Future<Null> _getRotas() async {
-     // Recuperando rotas com DIO
-    print('RECUPERANDO ROTAS com dio');
-    Response response;
-    var dio = Dio();
-    dio.options.baseUrl = 'http://192.168.0.4:5200/api';
-    response = await dio.get('/general/rotas');
-   
-    var myThing = (jsonDecode(response.data) as List).map((e) => Rota.fromJson(e)).toList();
-    
-    
   }
 
   @override
@@ -171,7 +176,6 @@ class _FormEstoqueState extends State<FormEstoque> {
   Widget build(BuildContext context) {
 
     _dateFieldFocusNode.unfocus();
-    _getRotas();
 
     return Card(
       elevation: 15.0,
@@ -189,35 +193,39 @@ class _FormEstoqueState extends State<FormEstoque> {
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
 
-                DropdownButtonFormField<String>(
-                  items: _menuRotas,
-                  value: _modelItemRota.rota,
-                  onChanged: (String value) {
-                    setState(() {
-                      _modelItemRota.rota = value;
-                    });
+                StreamBuilder(
+                  stream: rotaBloc.rotaStream,
+                  builder: (context, snapshot) {
+                    if(!snapshot.hasData) {
+                      print('SEM DADOS');
+                      // lista as rotas
+                      rotaBloc.listAll();
+                      return LinearProgressIndicator();
+                    }
+
+                    var rotas = rotaBloc.getRotas();
+
+                    return DropdownButtonFormField<Rota>(
+                      value: rotaBloc.rotaSelecionada,
+                      hint: Text('SELECIONE UMA ROTA', style: TextStyle(fontWeight: FontWeight.bold),),
+                      onChanged: (Rota rota){
+                        rotaBloc.select(rota);
+                      },
+                      items: rotas.map<DropdownMenuItem<Rota>>((Rota rota){
+                        return DropdownMenuItem<Rota>(
+                          value: rota,
+                          child: Text('ROTA ${rota.codRoe}'),
+                        );
+                      }).toList(),
+                    );
                   },
-                  hint: Text('SELECIONE A ROTA', style: TextStyle(fontWeight: FontWeight.bold),),
                 ),
 
+               
 
                 Row(
                   mainAxisSize: MainAxisSize.max,
                       children: <Widget>[
-                        Expanded(
-                            flex: 2,
-                            child: TextFormField(
-                            focusNode: _dateFieldFocusNode,
-                            controller: _dateFieldController,
-                            keyboardType: TextInputType.datetime,
-                            decoration: InputDecoration(
-                              labelText: 'DATA DE EMISSÃO',  
-                            ),
-                          ),
-                        ),
-
-                        SizedBox(width: 5.0,),
-
                          Expanded(
                             flex: 2,
                             child: TextFormField(
@@ -230,13 +238,49 @@ class _FormEstoqueState extends State<FormEstoque> {
                           ),
                         ),
 
-                        
-
+                        Expanded(
+                          flex: 2,
+                          child: TextFormField(
+                            controller: _textEditingControllerTotal,
+                            enabled: false,
+                            decoration: InputDecoration(
+                              labelText: 'TOTAL LEITE C'
+                            ),
+                          ),
+                        )
                       ],
                     ),
 
 
+                    // botão de consulta dos movimentos
+                   ButtonTheme.bar(
+                        child: ButtonBar(
+                          children: <Widget>[
+                            RaisedButton.icon(
+                              splashColor: Theme.of(context).splashColor,
+                              color: Theme.of(context).primaryColor,
+                              icon: Icon(Icons.search, color: Colors.white,),
+                              label:  Text('Buscar', style: TextStyle(color: Colors.white),),
+                              onPressed: (){
+                                
+                                List<int> aux = _textEditingControllerDtEntrega.text.split('/').map((String v) => int.parse(v)).toList();
 
+                                itemRotaBloc.getLeiteC(
+                                  datEmi: DateTime(aux[2], aux[1], aux[0]),
+                                  rota:  rotaBloc.rotaSelecionada.codRoe
+                                ).then((total) {
+                                  print('TOTAL DE LEITE C ENCONTRADO $total');
+                                  _textEditingControllerTotal.text = total.toString();
+                                  _textEditingControllerComissao.text = (total/100.0).floor().toString();
+                                }).catchError((err) {
+                                  print("HOUVE UM ERRO $err");
+                                });
+
+                              },
+                            )
+                          ],
+                        ),
+                    ),
 
 
                     Row(
@@ -244,8 +288,8 @@ class _FormEstoqueState extends State<FormEstoque> {
                         Expanded(
                           flex: 1,
                           child: TextFormField(
-                            initialValue: '9',
                             enabled: false,
+                            controller: _textEditingControllerComissao,
                             keyboardType: TextInputType.number,
                             decoration: InputDecoration(
                               labelText: 'COMISSÃO'
@@ -270,6 +314,7 @@ class _FormEstoqueState extends State<FormEstoque> {
                         Expanded(
                           flex: 2,
                           child: TextFormField(
+                            enabled: false,
                             keyboardType: TextInputType.number,
                             decoration: InputDecoration(
                               labelText: 'SALDO DE CAIXAS'
@@ -325,23 +370,54 @@ class _FormEstoqueState extends State<FormEstoque> {
 
 
                           SizedBox(width: 5,),
-
+                          
                           Expanded(
                             flex: 5,
-                              child: DropdownButtonFormField<String>(
-                              decoration: InputDecoration(
-                                contentPadding: EdgeInsets.symmetric(vertical: 18.0, horizontal: 8.0),
-                              ),
-                              hint: Text('TRANSAÇÃO'),
-                              items: _menuTns,
-                              value: _modelProduto.codTns,
-                              onChanged: (String value) {
-                                  setState(() {
-                                    _modelProduto.codTns = value;
-                                  });
+                            child: StreamBuilder(
+                              stream: transacaoBloc.tnsStream,
+                              builder: (context, snapshot){
+                                if(!snapshot.hasData) {
+                                  transacaoBloc.listAll();
+                                  return LinearProgressIndicator();
+                                }
+
+                                var transacoes = transacaoBloc.getTransacoes();
+
+                                return DropdownButtonFormField<Transacao>(
+                                  value: transacaoBloc.tnsSelecionada,
+                                  decoration: InputDecoration(contentPadding: EdgeInsets.symmetric(vertical: 17.5, horizontal: 8)),
+                                  hint: Text('TRANSAÇÃO', style: TextStyle(fontWeight: FontWeight.bold),),
+                                  onChanged: (Transacao tns){
+                                    // rotaBloc.select(rota);
+                                    transacaoBloc.select(tns);
+                                  },
+                                  items:  transacoes.map<DropdownMenuItem<Transacao>>((Transacao tns){
+                                    return DropdownMenuItem<Transacao>(
+                                      value: tns,
+                                      child: Text('${tns.codTns}'),
+                                    );
+                                  }).toList(),
+                                );
                               },
-                            ),
+                            )
                           )
+
+                          // Expanded(
+                          //   flex: 5,
+                          //     child: DropdownButtonFormField<String>(
+                          //     decoration: InputDecoration(
+                          //       contentPadding: EdgeInsets.symmetric(vertical: 18.0, horizontal: 8.0),
+                          //     ),
+                          //     hint: Text('TRANSAÇÃO'),
+                          //     items: _menuTns,
+                          //     value: _modelProduto.codTns,
+                          //     onChanged: (String value) {
+                          //         setState(() {
+                          //           _modelProduto.codTns = value;
+                          //         });
+                          //     },
+                          //   ),
+                          // )
                         ],
                       ),
 
@@ -353,9 +429,20 @@ class _FormEstoqueState extends State<FormEstoque> {
                             icon: Icon(Icons.add, color: Colors.white,),
                             label:  Text('Adicionar produto', style: TextStyle(color: Colors.white),),
                             onPressed: (){
+
+                              // subtraindo da comissão
+                              var comissao = int.parse(_textEditingControllerComissao.text);
+                              
+                              if(_modelProduto.codPro == '010.01') {
+                                comissao -= _modelProduto.qtd;
+                              }
+                              _textEditingControllerComissao.text = comissao.toString();
                               // adicionando mais um produto
+                              _modelProduto.codTns = transacaoBloc.tnsSelecionada.codTns;
                               itemRotaBloc.addProduto(_modelProduto);
                               _modelProduto = Produto();
+                              transacaoBloc.select(null);
+
                               setState(() {
                                myController.clear(); 
                               });
